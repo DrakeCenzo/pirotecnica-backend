@@ -34,7 +34,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Protezioni attacchi
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
+const xss = require('xss');
 const hpp = require('hpp');
 
 const loginLimiter = rateLimit({
@@ -68,9 +68,11 @@ app.get('/api/test', (req, res) => {
 });
 
 // ==================== 404 ====================
-app.use('*', (req, res) => {
+
+app.all('*', (req, res) => {
   res.status(404).json({ message: 'Rotta non trovata' });
 });
+
 
 // ==================== GESTIONE ERRORI GLOBALE ====================
 app.use((err, req, res, next) => {
