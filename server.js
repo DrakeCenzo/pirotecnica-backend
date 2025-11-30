@@ -68,6 +68,7 @@ app.get('/api/test', (req, res) => {
 });
 
 
+
 // ==================== 404 ====================
 app.all('*', (req, res) => {
   res.status(404).json({ message: 'Rotta non trovata' });
@@ -82,6 +83,7 @@ app.use((err, req, res, next) => {
       : err.message
   });
 });
+
 
 
 // ==================== AVVIO SERVER ====================
