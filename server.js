@@ -67,13 +67,11 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+
 // ==================== 404 ====================
-
-
-app.use((req, res) => {
+app.all('*', (req, res) => {
   res.status(404).json({ message: 'Rotta non trovata' });
 });
-
 
 // ==================== GESTIONE ERRORI GLOBALE ====================
 app.use((err, req, res, next) => {
@@ -84,6 +82,7 @@ app.use((err, req, res, next) => {
       : err.message
   });
 });
+
 
 // ==================== AVVIO SERVER ====================
 const PORT = process.env.PORT || 5000;
