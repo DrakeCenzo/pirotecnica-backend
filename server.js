@@ -69,7 +69,8 @@ app.get('/api/test', (req, res) => {
 
 // ==================== 404 ====================
 
-app.all('*', (req, res) => {
+
+app.use((req, res) => {
   res.status(404).json({ message: 'Rotta non trovata' });
 });
 
