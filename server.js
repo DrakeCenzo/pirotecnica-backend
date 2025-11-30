@@ -7,18 +7,18 @@ const dotenv = require('dotenv');
 const path = require('path');
 const connectDB = require('./config/database');
 
-// Sicurezza
+// Pacchetti sicurezza
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss');        // ← Usiamo questo (già installato)
+const xss = require('xss');        // ← usiamo solo questo, come richiesto
 const hpp = require('hpp');
 
+// Carica variabili d'ambiente
 dotenv.config();
 
 const app = express();
 
-// ==================== MIDDLEWARE ====================
-
+// ==================== MIDDLEWARE BASE ====================
 app.use(cors({
   origin: true,
   credentials: true
@@ -26,19 +26,19 @@ app.use(cors({
 console.log('CORS aperto per sviluppo locale');
 
 app.use(helmet({
-  contentSecurityPolicy: false
+  contentSecurityPolicy: false  // necessario per Tailwind CDN
 }));
 
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Cartella uploads
+// Cartella uploads pubblica
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Rate limit login
+// Rate limit solo sul login
 const loginLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
+  windowMs: 10 * 60 * 1000, // 10 minuti
   max: 10,
   message: { message: 'Troppi tentativi di login. Riprova tra 10 minuti.' },
   standardHeaders: true,
@@ -46,26 +46,24 @@ const loginLimiter = rateLimit({
 });
 app.use('/api/auth/login', loginLimiter);
 
-// ==================== SICUREZZA CON xss (SOLO QUESTO PACCHETTO) ====================
-
+// ==================== SICUREZZA (con solo "xss") ====================
 app.use(mongoSanitize());
 app.use(hpp());
 
-// Middleware personalizzato per pulire XSS con il pacchetto xss
+// Middleware XSS personalizzato (pulisce body, query e params)
 app.use((req, res, next) => {
   const clean = (obj) => {
     if (!obj || typeof obj !== 'object') return obj;
     if (Array.isArray(obj)) return obj.map(clean);
-    if (obj instanceof Date || obj instanceof RegExp) return obj;
 
     const cleaned = {};
     for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      if (Object.hasOwnProperty.call(obj, key)) {
         const value = obj[key];
         if (typeof value === 'string') {
           cleaned[key] = xss(value, {
-            whiteList: {},              // niente tag permesso
-            stripIgnoreTag: true,       // rimuove tutto ciò che non è nella whitelist
+            whiteList: {},
+            stripIgnoreTag: true,
             stripIgnoreTagBody: ['script']
           });
         } else {
@@ -83,15 +81,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// ==================== DATABASE ====================
+// ==================== CONNESSIONE DATABASE ====================
 connectDB();
 
-// ==================== ROTTE (TUTTE PRIMA DEL LISTEN!) ====================
+// ==================== ROTTE ====================
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
-app.use('/api/licenses', require('./routes/licenses'));  // ← spostato qui!
+app.use('/api/licenses', require('./routes/licenses'));
 
-// Test
+// Test rapido
 app.get('/api/test', (req, res) => {
   res.json({
     message: 'Pirotecnica Posca Backend ONLINE e SICURO!',
@@ -100,12 +98,12 @@ app.get('/api/test', (req, res) => {
   });
 });
 
-// 404
-app.all('*', (req, res) => {
+// ==================== 404 – VERSIONE SICURA PER NODE 22+ ====================
+app.use((req, res) => {
   res.status(404).json({ message: 'Rotta non trovata' });
 });
 
-// Error handler
+// ==================== GESTIONE ERRORI GLOBALE ====================
 app.use((err, req, res, next) => {
   console.error('ERRORE:', err.message);
   res.status(err.status || 500).json({
